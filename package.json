@@ -5,13 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test-integration": "casperjs test ./test/integration/test.*.js",
-    "test-integration-runner": "NODE_ENV=test node casper-runner.js",
-    "test": "npm run lint && npm run test-integration-runner",
-    "test-unit": "jest test/unit --coverage",
     "lint": "eslint .",
-    "autofix": "eslint --fix .",
-    "codecov": "npm run test && (codecov || true)"
+    "autofix": "eslint --fix ."
   },
   "repository": {
     "type": "git",
@@ -19,6 +14,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@cloudant/cloudant": "^4.2.4",
     "body-parser": "^1.19.0",
     "dotenv": "^6.2.0",
     "express": "^4.17.1",

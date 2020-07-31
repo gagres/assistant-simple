@@ -22,8 +22,17 @@ var bodyParser = require('body-parser'); // parser for post requests
 var AssistantV2 = require('ibm-watson/assistant/v2'); // watson sdk
 const { IamAuthenticator, BearerTokenAuthenticator } = require('ibm-watson/auth');
 
+let dbConn = null;
 var app = express();
-require('./health/health')(app);
+
+const getDbConnection = require('./db');
+
+getDbConnection()
+  .then((connection) => dbConn = connection)
+  .catch((err) => {
+    console.log(err);
+    process.exit(0);
+  });
 
 // Bootstrap application settings
 app.use(express.static('./public')); // load UI from public folder
