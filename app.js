@@ -22,13 +22,15 @@ var bodyParser = require('body-parser'); // parser for post requests
 var AssistantV2 = require('ibm-watson/assistant/v2'); // watson sdk
 const { IamAuthenticator, BearerTokenAuthenticator } = require('ibm-watson/auth');
 
-let dbConn = null;
+let cloudantDb = null;
 var app = express();
 
 const getDbConnection = require('./db');
 
 getDbConnection()
-  .then((connection) => dbConn = connection)
+  .then(async (db) => {
+    cloudantDb = db;
+  })
   .catch((err) => {
     console.log(err);
     process.exit(0);
@@ -59,7 +61,7 @@ var assistant = new AssistantV2({
 });
 
 // Endpoint to be call from the client side
-app.post('/api/message', function(req, res) {
+app.post('/api/message', async function(req, res) {
   let assistantId = process.env.ASSISTANT_ID || '<assistant-id>';
   if (!assistantId || assistantId === '<assistant-id>') {
     return res.json({
@@ -79,20 +81,51 @@ app.post('/api/message', function(req, res) {
     textIn = req.body.input.text;
   }
 
+  const sessionId = req.body.session_id;
+
   var payload = {
+    sessionId,
     assistantId: assistantId,
-    sessionId: req.body.session_id,
     input: {
       message_type: 'text',
       text: textIn,
     },
   };
 
+  let sessionInteraction;
+  try {
+    sessionInteraction = await cloudantDb.get(sessionId);
+  } catch(err) {
+    await cloudantDb.insert({
+      _id: sessionId,
+      id: sessionId,
+      answers: {},
+    }, sessionId);
+    sessionInteraction = await cloudantDb.get(sessionId);
+  }
+
   // Send the input to the assistant service
-  assistant.message(payload, function(err, data) {
+  assistant.message(payload, async function(err, data) {
     if (err) {
       const status = err.code !== undefined && err.code > 0 ? err.code : 500;
       return res.status(status).json(err);
+    }
+
+    const paramsUserDefined = data.result.output.user_defined;
+    if (paramsUserDefined) {
+      if (paramsUserDefined.answer) {
+        try {
+          const oldAnswer = sessionInteraction.answers;
+          oldAnswer[paramsUserDefined.answer] = textIn;
+          await cloudantDb.insert({
+            ...sessionInteraction,
+            answers: oldAnswer
+          });
+        } catch (err) {
+          console.log('Erro para salvar a resposta do usuário!')
+          console.error(err);
+        }
+      }
     }
 
     return res.json(data);

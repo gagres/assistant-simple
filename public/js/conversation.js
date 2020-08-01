@@ -171,6 +171,17 @@ var ConversationPanel = (function () {
   // Constructs new DOM element from a message
   function getDivObject(res, isUser, isTop) {
     var classes = [(isUser ? 'from-user' : 'from-watson'), 'latest', (isTop ? 'top' : 'sub')];
+    
+    const textElem = {};
+    if (res.innerhtml.indexOf('http') != -1) {
+      textElem['children'] = [{
+        'tagName': 'a',
+        'text': res.innerhtml
+      }];
+    } else {
+      textElem['text'] = res.innerhtml;
+    }
+
     var messageJson = {
       // <div class='segments'>
       'tagName': 'div',
@@ -183,11 +194,11 @@ var ConversationPanel = (function () {
           // <div class='message-inner'>
           'tagName': 'div',
           'classNames': ['message-inner'],
-          'children': [{
-            // <p>{messageText}</p>
-            'tagName': 'p',
-            'text': res.innerhtml
-          }]
+          'children': [
+            Object.assign({
+              'tagName': 'p',
+            }, textElem)
+          ]
         }]
       }]
     };
